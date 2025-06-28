@@ -28,6 +28,14 @@ ${BUILD_URL}""",
         }
     }
 
+    stage('Generate Inventory File') {
+        echo 'Creating dynamic inventory.ini file...'
+        writeFile file: 'inventory.ini', text: '''
+[test]
+100.26.193.218 ansible_user=ubuntu
+'''
+    }
+
     stage('Build the Application') {
         echo 'Running Maven clean package...'
         sh "${mavenCMD} clean package"
@@ -62,7 +70,6 @@ ${BUILD_URL}""",
     stage('Deploy to Test Server using Ansible') {
         echo "Deploying application using Ansible..."
 
-        // Save the private key to a temp file (used by Ansible)
         withCredentials([sshUserPrivateKey(credentialsId: 'ansible-key', keyFileVariable: 'ANSIBLE_KEY')]) {
             sh '''
                 ansible-playbook ansible-playbook.yml \
