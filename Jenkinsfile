@@ -52,21 +52,25 @@ ${BUILD_URL}""",
 
     stage('Push to DockerHub') {
         echo "Pushing Docker image to DockerHub as ${dockerImage}"
-        withCredentials([string(credentialsId: 'dock-password', variable: 'dockerHubPassword')]) {
-            sh "echo ${dockerHubPassword} | docker login -u azharhashmi --password-stdin"
-            sh "docker push ${dockerImage}"
+        withCredentials([string(credentialsId: 'dock-password', variable: 'DOCKER_PASSWORD')]) {
+            sh '''
+                echo "$DOCKER_PASSWORD" | docker login -u azharhashmi --password-stdin
+                docker push ''' + dockerImage
         }
     }
 
     stage('Deploy to Test Server using Ansible') {
         echo "Deploying application using Ansible..."
-        ansiblePlaybook(
-            become: true,
-            credentialsId: 'ansible-key',
-            disableHostKeyChecking: true,
-            installation: 'ansible',
-            inventory: '/etc/ansible/hosts',
-            playbook: 'ansible-playbook.yml'
-        )
+
+        // Save the private key to a temp file (used by Ansible)
+        withCredentials([sshUserPrivateKey(credentialsId: 'ansible-key', keyFileVariable: 'ANSIBLE_KEY')]) {
+            sh '''
+                ansible-playbook ansible-playbook.yml \
+                    -i inventory.ini \
+                    --private-key $ANSIBLE_KEY \
+                    -u ubuntu \
+                    -b
+            '''
+        }
     }
 }
