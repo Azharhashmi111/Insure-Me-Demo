@@ -61,23 +61,23 @@ ${BUILD_URL}""",
     stage('Push to DockerHub') {
         echo "Pushing Docker image to DockerHub as ${dockerImage}"
         withCredentials([string(credentialsId: 'dock-password', variable: 'DOCKER_PASSWORD')]) {
-            sh '''
+            sh """
                 echo "$DOCKER_PASSWORD" | docker login -u azharhashmi --password-stdin
-                docker push ''' + dockerImage
+                docker push ${dockerImage}
+            """
         }
     }
 
     stage('Deploy to Test Server using Ansible') {
         echo "Deploying application using Ansible..."
-
         withCredentials([sshUserPrivateKey(credentialsId: 'ansible-key', keyFileVariable: 'ANSIBLE_KEY')]) {
-            sh '''
+            sh """
                 ansible-playbook ansible-playbook.yml \
-                    -i inventory.ini \
-                    --private-key $ANSIBLE_KEY \
-                    -u ubuntu \
-                    -b
-            '''
+                -i inventory.ini \
+                --private-key $ANSIBLE_KEY \
+                -u ubuntu \
+                -b
+            """
         }
     }
 }
