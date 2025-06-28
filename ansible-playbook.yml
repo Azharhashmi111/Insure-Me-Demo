@@ -1,26 +1,65 @@
-- name: Configure Docker on EC2 Instances
+- name: Configure Docker and Deploy Insure-Me App
   hosts: all
   become: true
   tasks:
-    - name: Update apt cache
+    - name: Remove conflicting containerd package (if any)
+      apt:
+        name: containerd
+        state: absent
+        purge: yes
+      ignore_errors: yes
+
+    - name: Install dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
+
+    - name: Add Docker’s official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker APT repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable
+        state: present
+        filename: docker
+
+    - name: Update apt cache after adding Docker repo
       apt:
         update_cache: yes
 
-    - name: Install Docker
+    - name: Install Docker CE
       apt:
-        name: docker.io
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
         state: present
 
-    - name: Start Docker service
+    - name: Ensure Docker service is started and enabled
       service:
         name: docker
         state: started
         enabled: true
+
+    - name: Stop old container if exists
+      shell: docker rm -f insureme || true
+
+    - name: Pull latest Docker image
+      shell: docker pull azharhashmi/insure-me:3.0
 
     - name: Run Docker container
       docker_container:
         name: insureme
         image: azharhashmi/insure-me:3.0
         state: started
+        restart_policy: always
         ports:
           - "8084:8081"
