@@ -1,5 +1,4 @@
 node {
-
     def mavenHome
     def mavenCMD
     def tagName = "3.0"
