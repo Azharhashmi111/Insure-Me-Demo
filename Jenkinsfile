@@ -3,38 +3,39 @@ node {
     def mavenHome
     def mavenCMD
     def tagName = "3.0"
+    def dockerImage = "azharhashmi/insure-me:${tagName}"
 
     stage('Prepare Environment') {
-        echo 'Initializing Maven tool'
+        echo 'Initializing Maven tool...'
         mavenHome = tool name: 'maven', type: 'maven'
         mavenCMD = "${mavenHome}/bin/mvn"
     }
 
     stage('Git Code Checkout') {
         try {
-            echo 'Checking out code from GitHub...'
+            echo 'Cloning code from GitHub...'
             git 'https://github.com/Azharhashmi111/Insure-Me-Demo.git'
         } catch (Exception e) {
             echo 'Exception occurred during Git checkout.'
             currentBuild.result = "FAILURE"
             emailext(
                 body: """Dear All,
-The Jenkins job ${JOB_NAME} has failed. Please check: 
+The Jenkins job ${JOB_NAME} has failed during Git checkout. Please review the details here:
 ${BUILD_URL}""",
                 subject: "Job ${JOB_NAME} #${BUILD_NUMBER} Failed",
-                to: 'shubham@gmail.com'
+                to: 'azhar@gmail.com'
             )
-            error "Stopping pipeline due to checkout failure"
+            error "Stopping pipeline due to Git checkout failure."
         }
     }
 
     stage('Build the Application') {
-        echo "Running Maven clean package..."
+        echo 'Running Maven clean package...'
         sh "${mavenCMD} clean package"
     }
 
     stage('Publish Test Reports') {
-        echo "Publishing Surefire HTML Reports..."
+        echo 'Publishing Surefire HTML reports...'
         publishHTML([
             allowMissing: true,
             alwaysLinkToLastBuild: true,
@@ -46,20 +47,20 @@ ${BUILD_URL}""",
     }
 
     stage('Containerize the Application') {
-        echo 'Creating Docker image...'
-        sh "docker build -t shubhamkushwah123/insure-me:${tagName} ."
+        echo "Building Docker image: ${dockerImage}"
+        sh "docker build -t ${dockerImage} ."
     }
 
     stage('Push to DockerHub') {
-        echo 'Pushing Docker image to DockerHub...'
+        echo "Pushing Docker image to DockerHub as ${dockerImage}"
         withCredentials([string(credentialsId: 'dock-password', variable: 'dockerHubPassword')]) {
-            sh "echo ${dockerHubPassword} | docker login -u shubhamkushwah123 --password-stdin"
-            sh "docker push shubhamkushwah123/insure-me:${tagName}"
+            sh "echo ${dockerHubPassword} | docker login -u azharhashmi --password-stdin"
+            sh "docker push ${dockerImage}"
         }
     }
 
     stage('Deploy to Test Server using Ansible') {
-        echo "Deploying via Ansible playbook..."
+        echo "Deploying application using Ansible..."
         ansiblePlaybook(
             become: true,
             credentialsId: 'ansible-key',
