@@ -2,28 +2,25 @@
   hosts: all
   become: true
   tasks:
-
     - name: Update apt cache
       apt:
         update_cache: yes
-        cache_valid_time: 3600
 
     - name: Install Docker
       apt:
         name: docker.io
         state: present
 
-    - name: Start and enable Docker service
+    - name: Start Docker service
       service:
         name: docker
         state: started
         enabled: true
 
-    - name: Deploy Docker container
+    - name: Run Docker container
       docker_container:
-        name: insure-me
+        name: insureme
         image: azharhashmi/insure-me:3.0
         state: started
-        recreate: yes
-        published_ports:
+        ports:
           - "8084:8081"
