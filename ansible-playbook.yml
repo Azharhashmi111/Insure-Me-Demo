@@ -42,10 +42,14 @@
       apt:
         update_cache: yes
 
-    - name: Install Docker
+    - name: Install Docker CE packages (recommended)
       apt:
-        name: docker.io
-        state: present
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: latest
+        update_cache: yes
 
     - name: Start Docker service
       service:
